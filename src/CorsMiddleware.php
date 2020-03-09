@@ -48,20 +48,25 @@ use Psr\Log\LoggerInterface;
 use Tuupola\Http\Factory\ResponseFactory;
 use Tuupola\Middleware\DoublePassTrait;
 
+use function parse_url;
+
 final class CorsMiddleware implements MiddlewareInterface
 {
+    const ALLOW_ALL_ORIGIN = "*";
+
     use DoublePassTrait;
 
     private $logger;
     private $options = [
-        "origin" => "*",
+        "origin" => self::ALLOW_ALL_ORIGIN,
         "methods" => ["GET", "POST", "PUT", "PATCH", "DELETE"],
         "headers.allow" => [],
         "headers.expose" => [],
         "credentials" => false,
-        "origin.server" => null,
+        "origin.servers" => null,
         "cache" => 0,
-        "error" => null
+        "error" => null,
+        "enable.check.host" => false,
     ];
 
     public function __construct($options = [])
@@ -115,7 +120,6 @@ final class CorsMiddleware implements MiddlewareInterface
                 /* Actual CORS request. */
                 $response = $handler->handle($request);
                 $cors_headers = $cors->getResponseHeaders();
-                $cors_headers = $this->fixHeaders($cors_headers);
 
                 foreach ($cors_headers as $header => $value) {
                     /* Diactoros errors on integer values. */
@@ -157,53 +161,61 @@ final class CorsMiddleware implements MiddlewareInterface
     {
         $settings = new CorsSettings();
 
-        $origin = array_fill_keys((array) $this->options["origin"], true);
-        $settings->setRequestAllowedOrigins($origin);
+        $this->setOriginSettings($settings);
 
         if (is_callable($this->options["methods"])) {
             $methods = (array) $this->options["methods"]($request, $response);
         } else {
             $methods = $this->options["methods"];
         }
-        $methods = array_fill_keys($methods, true);
-        $settings->setRequestAllowedMethods($methods);
+        $settings->setAllowedMethods($methods);
 
-        $headers = array_fill_keys($this->options["headers.allow"], true);
-        $headers = array_change_key_case($headers, CASE_LOWER);
-        $settings->setRequestAllowedHeaders($headers);
+        $headers = array_change_key_case($this->options["headers.allow"], CASE_LOWER);
+        $settings->setAllowedHeaders($headers);
 
-        $headers = array_fill_keys($this->options["headers.expose"], true);
-        $settings->setResponseExposedHeaders($headers);
+        $settings->setExposedHeaders($this->options["headers.expose"]);
 
-        $settings->setRequestCredentialsSupported($this->options["credentials"]);
+        $settings->setCredentialsNotSupported();
+        if($this->options["credentials"]) {
+            $settings->setCredentialsSupported();
+        }
 
-        if (is_string($this->options["origin.server"])) {
-            $settings->setServerOrigin($this->options["origin.server"]);
+        if (is_array($this->options["origin.servers"])) {
+            $settings->setAllowedOrigins($this->options["origin.servers"]);
         }
 
         $settings->setPreFlightCacheMaxAge($this->options["cache"]);
 
+        $settings->disableCheckHost();
+        if ($this->options["enable.check.host"]) {
+            $settings->enableCheckHost();
+        }
+
         return $settings;
     }
 
-    /**
-     * Edge cannot handle multiple Access-Control-Expose-Headers headers
-     */
-    private function fixHeaders(array $headers): array
+    private function setOriginSettings(CorsSettings $settings): void
     {
-        if (isset($headers[CorsResponseHeaders::EXPOSE_HEADERS])) {
-            $headers[CorsResponseHeaders::EXPOSE_HEADERS] =
-                implode(",", $headers[CorsResponseHeaders::EXPOSE_HEADERS]);
+        if($this->options["origin"] === self::ALLOW_ALL_ORIGIN) {
+            $settings->enableAllOriginsAllowed();
         }
-        return $headers;
+        $originOptions = parse_url($this->options["origin"]);
+        if (!is_array($originOptions)) {
+            return;
+        }
+        $settings->setServerOrigin(
+            $originOptions['scheme'] ?? "http",
+            $originOptions['host'] ?? "*",
+            $originOptions['port'] ?? 80
+        );
     }
 
     /**
      * Set allowed origin.
      */
-    private function origin($origin): void
+    private function origin(string $origin): void
     {
-        $this->options["origin"] = (array) $origin;
+        $this->options["origin"] = $origin;
     }
 
     /**
@@ -249,9 +261,9 @@ final class CorsMiddleware implements MiddlewareInterface
     /**
      * Set the server origin.
      */
-    private function originServer(?string $origin): void
+    private function originServers(array $origins): void
     {
-        $this->options["origin.server"] = $origin;
+        $this->options["origin.servers"] = $origins;
     }
 
     /**
@@ -260,6 +272,14 @@ final class CorsMiddleware implements MiddlewareInterface
     private function cache(int $cache): void
     {
         $this->options["cache"] = $cache;
+    }
+
+    /**
+     * Set enable check host
+     */
+    private function enableCheckHost(bool $value): void
+    {
+        $this->options['enable.check.host'] = $value;
     }
 
     /**

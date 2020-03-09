@@ -93,7 +93,7 @@ class CorsTest extends TestCase
         $this->assertEquals("http://www.example.com", $response->getHeaderLine("Access-Control-Allow-Origin"));
         $this->assertEquals("true", $response->getHeaderLine("Access-Control-Allow-Credentials"));
         $this->assertEquals("Origin", $response->getHeaderLine("Vary"));
-        $this->assertEquals("Authorization,Etag", $response->getHeaderLine("Access-Control-Expose-Headers"));
+        $this->assertEquals("Authorization, Etag", $response->getHeaderLine("Access-Control-Expose-Headers"));
     }
 
     public function testShouldReturn401WithWrongOrigin()
@@ -104,7 +104,7 @@ class CorsTest extends TestCase
 
         $response = (new ResponseFactory())->createResponse();
         $cors = new CorsMiddleware([
-            "origin" => ["http://www.example.com"],
+            "origin" => "http://www.example.com",
             "methods" => ["GET", "POST", "PUT", "PATCH", "DELETE"],
             "headers.allow" => ["Authorization", "If-Match", "If-Unmodified-Since"],
             "headers.expose" => ["Authorization", "Etag"],
@@ -129,7 +129,7 @@ class CorsTest extends TestCase
 
         $response = (new ResponseFactory())->createResponse();
         $cors = new CorsMiddleware([
-            "origin" => ["http://www.example.com", "http://mobile.example.com"],
+            "origin.servers" => ["http://www.example.com", "http://mobile.example.com"],
             "methods" => ["GET", "POST", "PUT", "PATCH", "DELETE"],
             "headers.allow" => ["Authorization", "If-Match", "If-Unmodified-Since"],
             "headers.expose" => ["Authorization", "Etag"],
@@ -243,7 +243,7 @@ class CorsTest extends TestCase
 
         $response = (new ResponseFactory())->createResponse();
         $cors = new CorsMiddleware([
-            "origin" => ["*"],
+            "origin" => "*",
             "methods" => function ($request) {
                 return ["GET", "POST", "DELETE"];
             },
@@ -273,7 +273,7 @@ class CorsTest extends TestCase
 
         $response = (new ResponseFactory())->createResponse();
         $cors = new CorsMiddleware([
-            "origin" => ["*"],
+            "origin" => "*",
             "methods" => new TestMethodsHandler(),
             "headers.allow" => ["Authorization", "If-Match", "If-Unmodified-Since"],
             "headers.expose" => ["Authorization", "Etag"],
@@ -301,7 +301,7 @@ class CorsTest extends TestCase
 
         $response = (new ResponseFactory())->createResponse();
         $cors = new CorsMiddleware([
-            "origin" => ["*"],
+            "origin" => "*",
             "methods" => [TestMethodsHandler::class, "methods"],
             "headers.allow" => ["Authorization", "If-Match", "If-Unmodified-Since"],
             "headers.expose" => ["Authorization", "Etag"],
@@ -329,7 +329,7 @@ class CorsTest extends TestCase
 
         $response = (new ResponseFactory())->createResponse();
         $cors = new CorsMiddleware([
-            "origin" => ["*"],
+            "origin" => "*",
             "methods" => ["GET", "POST", "PUT", "PATCH", "DELETE"],
             "headers.allow" => ["Authorization", "If-Match", "If-Unmodified-Since"],
             "headers.expose" => ["Authorization", "Etag"],
@@ -359,7 +359,7 @@ class CorsTest extends TestCase
 
         $response = (new ResponseFactory())->createResponse();
         $cors = new CorsMiddleware([
-            "origin" => ["*"],
+            "origin" => "*",
             "methods" => ["GET", "POST", "PUT", "PATCH", "DELETE"],
             "headers.allow" => ["Authorization", "If-Match", "If-Unmodified-Since"],
             "headers.expose" => ["Authorization", "Etag"],
@@ -384,8 +384,9 @@ class CorsTest extends TestCase
 
         $response = (new ResponseFactory())->createResponse();
         $cors = new CorsMiddleware([
-            "origin" => [],
-            "origin.server" => "https://example.com"
+            "origin" => '',
+            "origin.servers" => ["https://example.com"],
+            'enable.check.host' => true,
         ]);
 
         $next = function (ServerRequestInterface $request, ResponseInterface $response) {
@@ -410,7 +411,7 @@ class CorsTest extends TestCase
         $logger = new NullLogger();
         $cors = new CorsMiddleware([
             "logger" => $logger,
-            "origin" => ["*"],
+            "origin" => "*",
             "methods" => ["GET", "POST", "PUT", "PATCH", "DELETE"],
             "headers.allow" => ["Authorization", "If-Match", "If-Unmodified-Since"],
             "headers.expose" => ["Authorization", "Etag"],
@@ -444,7 +445,7 @@ class CorsTest extends TestCase
         $logger = new NullLogger();
         $cors = new CorsMiddleware([
             "logger" => $logger,
-            "origin" => ["*"],
+            "origin" => "*",
             "methods" => ["GET", "POST", "PUT", "PATCH", "DELETE"],
             "headers.allow" => ["Authorization", "If-Match", "If-Unmodified-Since"],
             "headers.expose" => ["Authorization", "Etag"],
@@ -475,7 +476,7 @@ class CorsTest extends TestCase
         $logger = new NullLogger();
         $cors = new CorsMiddleware([
             "logger" => $logger,
-            "origin" => ["*"],
+            "origin" => "*",
             "methods" => ["GET", "POST", "PUT", "PATCH", "DELETE"],
             "headers.allow" => ["Authorization", "If-Match", "If-Unmodified-Since"],
             "headers.expose" => ["Authorization", "Etag"],
@@ -508,7 +509,7 @@ class CorsTest extends TestCase
 
         $collection = new MiddlewareCollection([
             new CorsMiddleware([
-                "origin" => ["*"],
+                "origin" => "*",
                 "methods" => ["GET", "POST", "PUT", "PATCH", "DELETE"],
                 "headers.allow" => ["Authorization", "If-Match", "If-Unmodified-Since"],
                 "headers.expose" => ["Authorization", "Etag"],
@@ -522,7 +523,7 @@ class CorsTest extends TestCase
         $this->assertEquals("http://www.example.com", $response->getHeaderLine("Access-Control-Allow-Origin"));
         $this->assertEquals("true", $response->getHeaderLine("Access-Control-Allow-Credentials"));
         $this->assertEquals("Origin", $response->getHeaderLine("Vary"));
-        $this->assertEquals("Authorization,Etag", $response->getHeaderLine("Access-Control-Expose-Headers"));
+        $this->assertEquals("Authorization, Etag", $response->getHeaderLine("Access-Control-Expose-Headers"));
         $this->assertEquals("Success", $response->getBody());
     }
 }
