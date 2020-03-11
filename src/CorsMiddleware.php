@@ -67,6 +67,8 @@ final class CorsMiddleware implements MiddlewareInterface
         "cache" => 0,
         "error" => null,
         "enable.check.host" => false,
+        "enable.add.allow.methods.preflight.response" => false,
+        "enable.add.allow.headers.preflight.response" => false,
     ];
 
     public function __construct($options = [])
@@ -190,6 +192,14 @@ final class CorsMiddleware implements MiddlewareInterface
         if ($this->options["enable.check.host"]) {
             $settings->enableCheckHost();
         }
+        $settings->disableAddAllowedMethodsToPreFlightResponse();
+        if ($this->options["enable.add.allow.methods.preflight.response"]) {
+            $settings->enableAddAllowedMethodsToPreFlightResponse();
+        }
+        $settings->disableAddAllowedHeadersToPreFlightResponse();
+        if ($this->options["enable.add.allow.headers.preflight.response"]) {
+            $settings->enableAddAllowedHeadersToPreFlightResponse();
+        }
 
         return $settings;
     }
@@ -280,6 +290,22 @@ final class CorsMiddleware implements MiddlewareInterface
     private function enableCheckHost(bool $value): void
     {
         $this->options['enable.check.host'] = $value;
+    }
+
+    /**
+     * Set enable check host
+     */
+    private function enableAddAllowMethodsPreflightResponse(bool $value): void
+    {
+        $this->options['enable.add.allow.methods.preflight.response'] = $value;
+    }
+
+    /**
+     * Set enable check host
+     */
+    private function enableAddAllowHeadersPreflightResponse(bool $value): void
+    {
+        $this->options['enable.add.allow.headers.preflight.response'] = $value;
     }
 
     /**
